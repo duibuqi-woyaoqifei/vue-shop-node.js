@@ -24,22 +24,22 @@ app.use(bodyParser.urlencoded({ extended: true }))
 app.use(bodyParser.json())
 
 // 用户列表数据库 
-const accountDatabase = "zhiyinnitaimei"
+const accountDatabase = "test"
 // 创建数据库链接
-const conn = mysql.createConnection({
-    host: '127.0.0.1',
-    user: 'zhiyinnitaimei',
-    port: '3306',
-    password: 'niganmaaiyo',
-    database: 'zhiyinnitaimei',
-})
 // const conn = mysql.createConnection({
 //     host: '127.0.0.1',
-//     user: 'root',
+//     user: 'zhiyinnitaimei',
 //     port: '3306',
-//     password: 'root',
-//     database: 'test',
+//     password: 'niganmaaiyo',
+//     database: 'zhiyinnitaimei',
 // })
+const conn = mysql.createConnection({
+    host: '127.0.0.1',
+    user: 'root',
+    port: '3306',
+    password: 'root',
+    database: 'test',
+})
 conn.connect(err => {
     if (err) {
         console.log(err)
@@ -71,17 +71,38 @@ conn.query('use cxzks', function (error, mysqlRes, fields) {
 let AccountList = []
 app.get('/accountlist', function (req, res) {
     res.status(200)
-    console.log("有人登录啦");
-    // 每次访问更新数据
+    console.log("有人正在登录...");
+
+    if (JSON.stringify(req.query) === "{}") {
+        return res.json("拒绝访问！")
+    }
+
+    let data = JSON.parse(req.query[0])
+
     conn.query('SELECT * FROM ' + accountDatabase + '.accountlist', function (error, mysqlRes, fields) {
         if (error) {
             throw error
         }
         AccountList = []
+
         for (let i in mysqlRes) {
             AccountList.push(mysqlRes[i])
         }
-        res.json(AccountList)
+        if (data.operation === "getUsername") {
+            let usernameList = []
+            for (let i of AccountList) {
+                usernameList.push(i.username)
+            }
+            res.json(usernameList)
+            return
+        }
+        for (let i of AccountList) {
+            if (i.username === data.username && i.password === data.password) {
+                res.json("ok")
+                return
+            }
+        }
+        res.json("error")
     })
 
 });
@@ -99,7 +120,7 @@ app.post('/accountlist/set', function (req, res) {
     const sql = "INSERT INTO `" + accountDatabase + "`.`accountlist` (`username`, `password`) VALUES ('" + data.username + "','" + data.password + "')"
     conn.query(sql, function (error, res, fields) {
         if (error) throw error
-        // 每次访问更新数据
+
         conn.query('SELECT * FROM ' + accountDatabase + '.accountlist', function (error, res, fields) {
             if (error) {
                 throw error
